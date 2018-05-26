@@ -3,6 +3,8 @@ package com.example.olekeim.gpsoppgave;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -12,6 +14,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.akexorcist.googledirection.DirectionCallback;
 import com.akexorcist.googledirection.GoogleDirection;
@@ -27,6 +30,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
+import java.io.IOException;
 import java.security.PublicKey;
 import java.util.List;
 
@@ -44,7 +48,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private TextView tilText;
     private TextView fraText;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,6 +77,38 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         tilText = (TextView) findViewById(R.id.Til);
         fraText = (TextView) findViewById(R.id.Fra);
+
+        Button sokeknapp = findViewById(R.id.sokeKnapp);
+        sokeknapp.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String adresse1 = fraText.getText().toString();
+                String adresse2 = tilText.getText().toString();
+
+                if(adresse1.isEmpty() || adresse2.isEmpty()){
+                   Toast toast = Toast.makeText(getApplicationContext(), "Du må huske å fylle inn feltene",Toast.LENGTH_SHORT);
+                   toast.show();
+                   return;
+                }
+                LatLng fra = getLatLong(adresse1);
+                LatLng til = getLatLong(adresse2);
+
+                if (fra == null || til == null){
+                    Toast toast = Toast.makeText(getApplicationContext(), "Fant ikke adressene du oppgav",Toast.LENGTH_SHORT);
+                    toast.show();
+                    return;
+                }
+
+                mMap.addMarker(new MarkerOptions().position(fra).title(adresse1));
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(til));
+
+                Polyline linje = mMap.addPolyline(new PolylineOptions().add(
+                        fra, til)
+                        .width(15)
+                        .color(Color.GREEN));
+
+            }
+        });
 
 
         GoogleDirection.withServerKey("AIzaSyBtWKH927EIIXBFuURfl_-uwT8y2rsNMA8")
@@ -192,6 +227,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .width(15)
                 .color(Color.GREEN)
         );
+    }
+
+    private LatLng getLatLong(String adresse){
+        Geocoder geocoder = new Geocoder(getApplicationContext());
+
+        try {
+            List<Address> lokasjon = geocoder.getFromLocationName(adresse,1);
+            if (lokasjon.isEmpty()){
+                return null;
+            }
+            Address funnet = lokasjon.get(0);
+            LatLng latlong = new LatLng(funnet.getLatitude(),funnet.getLongitude());
+            return latlong;
+        } catch (IOException e) {
+            return null;
+        }
+
     }
 
 }
